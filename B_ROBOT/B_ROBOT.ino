@@ -44,9 +44,11 @@
 #include <I2Cdev.h>
 #include <JJ_MPU6050_DMP_6Axis.h>  // Modified version of the library to work with DMP (see comments inside)
 
-#define DEBUG 2
+#define DEBUG 0
+// some settings only necessary for my robot ;)
 // rwe: #define SHUTDOWN_WHEN_BATTERY_OFF 1
 #define MAX_MOTOR_SPEED 250 // rwe: 500 if you have optimal stepper and high voltage
+//#define MPU_ANGLE_CORRECTION (-3.0) // rwe: due to unprecise fitting of MPU
 
 #define CLR(x,y) (x&=(~(1<<y)))
 #define SET(x,y) (x|=(1<<y))
@@ -79,8 +81,8 @@
 #define GRAD2RAD 0.01745329251994329576923690768489
 
 // Default control terms   
-#define KP 0.20 // 0.22        
-#define KD 26   // 30 28        
+#define KP 0.20 // 0.22
+#define KD 34 // rwe: 26   // 30 28
 #define KP_THROTTLE 0.065  //0.08
 #define KI_THROTTLE 0.05
 
@@ -511,7 +513,7 @@ void autonomousMode() {
 
 void rwe_testMotors() {
 	int j = 10;
-	int maxSpeed = 300;
+	int maxSpeed = MAX_MOTOR_SPEED;
 	for (int i = 0; i < maxSpeed; i++) {
 		setMotorSpeed(0, i);
 		setMotorSpeed(1, i);
@@ -531,14 +533,6 @@ void rwe_testMotors() {
 		//Serial.print("speed is ");Serial.println(i);
 		delay(j);
 	}
-
-	delay(5000);
-	setMotorSpeed(0, 5);
-	delay(j);
-	setMotorSpeed(0, 10);
-	delay(j);
-	setMotorSpeed(0, 15);
-	delay(j);
 }
 
 void setup() {
@@ -756,8 +750,9 @@ void loop() {
 		//Serial.print("\t");
 		mpu.resetFIFO();  // We always reset FIFO
 
-		if (mode == 1)
+		if (mode == 1) {
 			autonomousMode();
+		}
 
 		// We calculate the estimated robot speed
 		// Speed = angular_velocity_of_stepper_motors - angular_velocity_of_robot(angle measured by IMU)
@@ -795,7 +790,7 @@ void loop() {
 		// We integrate the output (acceleration)
 		control_output += stabilityPDControl(dt, angle_adjusted, target_angle,
 				Kp, Kd);
-		control_output = constrain(control_output, -500, 500); // Limit max output from control
+		control_output = constrain(control_output, -MAX_MOTOR_SPEED, MAX_MOTOR_SPEED); // Limit max output from control
 
 		// The steering part of the control is injected directly on the output
 		motor1 = control_output + steering;
