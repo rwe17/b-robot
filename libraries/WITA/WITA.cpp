@@ -121,8 +121,9 @@ void WITA_Class::LedBlink(int times, boolean FinalStatus)
 void WITA_Class::WifiInit()
 {
     Serial1.begin(115200);  // Default Wifi module Serial speed
-    if (!Serial)
+    if (!Serial) {
         Serial.begin(9600);     // Default baud rate if not initialized
+    }
     delay(1000);
 }
 

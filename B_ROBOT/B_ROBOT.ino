@@ -37,6 +37,15 @@
 
 // Robot autonomous mode
 //   the robot start walking until reach an obstacle. When find an obstacle, start steering until it find a free way and continue walking
+//
+// ------------------------------------------------
+// rwe:
+//
+// Due to problems, when uploading the software to the leonardoboard via eclipse, if've found a solution to upload from shell:
+// $ # First, press the button on board
+// $ /Applications/Arduino.app/Contents/Resources/Java/hardware/tools/avr/bin/avrdude -C /Applications/Arduino.app/Contents/Resources/Java/hardware/tools/avr/etc/avrdude.conf -patmega32u4 -cavr109 -b57600 -Uflash:w:B_ROBOT/Release/B_ROBOT.hex:a -P/dev/cu.usbmodemfd121
+
+
 
 #include <WITA.h> 
 #include <OSCmini.h>
@@ -44,7 +53,11 @@
 #include <I2Cdev.h>
 #include <JJ_MPU6050_DMP_6Axis.h>  // Modified version of the library to work with DMP (see comments inside)
 
-#define DEBUG 0
+// 1: angle
+// 6: battery
+// 10: control_output
+// 11: quaterion
+#define DEBUG 11
 // some settings only necessary for my robot ;)
 // rwe: #define SHUTDOWN_WHEN_BATTERY_OFF 1
 #define MAX_MOTOR_SPEED 250 // rwe: 500 if you have optimal stepper and high voltage
@@ -82,7 +95,7 @@
 
 // Default control terms   
 #define KP 0.20 // 0.22
-#define KD 34 // rwe: 26   // 30 28
+#define KD 26   // 30 28
 #define KP_THROTTLE 0.065  //0.08
 #define KI_THROTTLE 0.05
 
@@ -199,8 +212,22 @@ void dmpSetSensorFusionAccelGain(uint8_t gain) {
 // Quick calculation to obtein Phi angle from quaternion solution
 float dmpGetPhi() {
 	mpu.getFIFOBytes(fifoBuffer, 16); // We only read the quaternion
-	mpu.dmpGetQuaternion(&q, fifoBuffer);
+	uint8_t status = mpu.dmpGetQuaternion(&q, fifoBuffer);
 	mpu.resetFIFO();  // We always reset FIFO
+#if DEBUG==11
+	if(status != 0) {
+    Serial.print("quat\t");
+    Serial.print(q.w);
+    Serial.print("\t");
+    Serial.print(q.x);
+    Serial.print("\t");
+    Serial.print(q.y);
+    Serial.print("\t");
+    Serial.print(q.z);
+    Serial.print("\tstatus:");
+    Serial.println(status);
+	}
+#endif
 
 	//return( asin(-2*(q.x * q.z - q.w * q.y)) * 180/M_PI); //roll
 	return (atan2(2 * (q.y * q.z + q.w * q.x),
@@ -511,28 +538,15 @@ void autonomousMode() {
 	}
 }
 
-void rwe_testMotors() {
-	int j = 10;
-	int maxSpeed = MAX_MOTOR_SPEED;
-	for (int i = 0; i < maxSpeed; i++) {
-		setMotorSpeed(0, i);
-		setMotorSpeed(1, i);
-		Serial.print("speed is ");
-		Serial.println(i);
-		delay(j);
-	}
-	for (int i = maxSpeed; i >= -maxSpeed; i--) {
-		setMotorSpeed(0, i);
-		setMotorSpeed(1, i);
-		//Serial.print("speed is ");Serial.println(i);
-		delay(j);
-	}
-	for (int i = -maxSpeed; i < 0; i++) {
-		setMotorSpeed(0, i);
-		setMotorSpeed(1, i);
-		//Serial.print("speed is ");Serial.println(i);
-		delay(j);
-	}
+void setupWifi() {
+	WITA.WifiInit();
+//	Serial.println("Wifi configuration..."); // CONFIGURATION ONLY NEEDED FIRST TIME
+//	WITA.WifiFactoryReset();
+//	WITA.WifiChangeBaudRateFast();
+//	WITA.WifiEnableUDP("2222","2223","192.168.1.11");
+//	WITA.WifiAP();       // Soft AP mode SSID:"WITA_AP"
+//	WITA.LedBlink(3, true);
+//	Serial.println("Wifi configuration...DONE");
 }
 
 void setup() {
@@ -549,14 +563,7 @@ void setup() {
 	Serial.begin(115200);
 
 	//servoAux.attach();
-
-	WITA.WifiInit();
-	//Serial.println("Wifi configuration...");  // CONFIGURATION ONLY NEEDED FIRST TIME
-	//WITA.WifiFactoryReset();
-	//WITA.WifiChangeBaudRateFast();
-	//WITA.WifiEnableUDP("2222","2223","192.168.1.11");
-	//WITA.WifiAP();       // Soft AP mode SSID:"WITA_AP"
-	//WITA.LedBlink(3,true);
+	setupWifi();
 
 	// Join I2C bus
 	Wire.begin();
@@ -679,8 +686,9 @@ void setup() {
 void loop() {
 	// If we have no battery, we do nothing...
 #ifdef SHUTDOWN_WHEN_BATTERY_OFF
-	if (Robot_shutdown)
-	return;
+	if (Robot_shutdown) {
+		return;
+	}
 #endif
 	debug_counter++;
 	OSC.MsgRead();  // Read UDP OSC messages
@@ -790,7 +798,11 @@ void loop() {
 		// We integrate the output (acceleration)
 		control_output += stabilityPDControl(dt, angle_adjusted, target_angle,
 				Kp, Kd);
-		control_output = constrain(control_output, -MAX_MOTOR_SPEED, MAX_MOTOR_SPEED); // Limit max output from control
+#if DEBUG==10
+		Serial.print(" ");Serial.println(control_output);
+#endif
+		control_output = constrain(control_output, -MAX_MOTOR_SPEED,
+				MAX_MOTOR_SPEED); // Limit max output from control
 
 		// The steering part of the control is injected directly on the output
 		motor1 = control_output + steering;
