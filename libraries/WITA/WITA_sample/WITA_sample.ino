@@ -1,6 +1,6 @@
 /*
   Example of WITA library.
-  Code by Jose Julio and Jordi Muñoz . 3DRobotics.com
+  Code by Jose Julio and Jordi Muï¿½oz . 3DRobotics.com
 
 */
 
@@ -8,7 +8,8 @@
 
 void setup()
 {
-  WITA.LED_blink(5);
+  WITA.LedOn();
+  WITA.LedBlink(5, false);
   WITA.InitServos();   // Servos initialization
   delay(1000);
 }
