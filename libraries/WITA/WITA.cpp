@@ -81,18 +81,23 @@ void WITA_Class::ServoWrite(unsigned char ch, unsigned int angle)
 	Servo(ch,pwm);
 }
 
-void WITA_Class::Servo(unsigned char ch, int pwm)
-{
-  pwm=constrain(pwm,MIN_PULSEWIDTH,MAX_PULSEWIDTH);
-  pwm<<=1;   // pwm*2;
- 
- switch(ch)
-  {
-    case 0:  OCR1A=pwm; break;  //ch0
-    case 1:  OCR1B=pwm; break;  //ch1
-    case 2:  OCR1C=pwm; break;  //ch2
-    case 3:  OCR3A=pwm; break;  //ch3    
-  } 
+void WITA_Class::Servo(unsigned char ch, int pwm) {
+	pwm = constrain(pwm, MIN_PULSEWIDTH, MAX_PULSEWIDTH);
+	pwm <<= 1;   // pwm*2;
+	switch (ch) {
+	case 0:
+		OCR1A = pwm;
+		break;  //ch0
+	case 1:
+		OCR1B = pwm;
+		break;  //ch1
+	case 2:
+		OCR1C = pwm;
+		break;  //ch2
+	case 3:
+		OCR3A = pwm;
+		break;  //ch3
+	}
 }
 
 void WITA_Class::LedOn()
