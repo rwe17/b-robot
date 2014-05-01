@@ -45,8 +45,6 @@
 // $ # First, press the button on board
 // $ /Applications/Arduino.app/Contents/Resources/Java/hardware/tools/avr/bin/avrdude -C /Applications/Arduino.app/Contents/Resources/Java/hardware/tools/avr/etc/avrdude.conf -patmega32u4 -cavr109 -b57600 -Uflash:w:B_ROBOT/Release/B_ROBOT.hex:a -P/dev/cu.usbmodemfd121
 
-
-
 #include <WITA.h> 
 #include <OSCmini.h>
 #include <Wire.h>
@@ -56,8 +54,7 @@
 // 1: angle
 // 6: battery
 // 10: control_output
-// 11: quaterion
-#define DEBUG 11
+#define DEBUG 6
 // some settings only necessary for my robot ;)
 // rwe: #define SHUTDOWN_WHEN_BATTERY_OFF 1
 #define MAX_MOTOR_SPEED 250 // rwe: 500 if you have optimal stepper and high voltage
@@ -105,7 +102,9 @@
 #define KP_THROTTLE_RAISEUP 0  // No speed control on raiseup
 #define KI_THROTTLE_RAISEUP 0.0
 
-#define SERVO_AUX_NEUTRO 1470
+#define SERVO_AUX_FORWARD (1000 + (180*100)/18)
+#define SERVO_AUX_NEUTRO (1000 + (90*100)/18)
+#define SERVO_AUX_BACKWARD (1000 + (0*100)/18)
 
 #define ITERM_MAX_ERROR 40   // Iterm windup constants
 #define ITERM_MAX 5000
@@ -190,6 +189,7 @@ uint8_t period_m_index[2];    // index for subperiods
 // DIR  Motor2: D13-> PORTC,7
 
 int freeRam() {
+	// see also: http://playground.arduino.cc/Code/AvailableMemory
 	extern int __heap_start, *__brkval;
 	int v;
 	return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
@@ -212,22 +212,8 @@ void dmpSetSensorFusionAccelGain(uint8_t gain) {
 // Quick calculation to obtein Phi angle from quaternion solution
 float dmpGetPhi() {
 	mpu.getFIFOBytes(fifoBuffer, 16); // We only read the quaternion
-	uint8_t status = mpu.dmpGetQuaternion(&q, fifoBuffer);
+	mpu.dmpGetQuaternion(&q, fifoBuffer);
 	mpu.resetFIFO();  // We always reset FIFO
-#if DEBUG==11
-	if(status != 0) {
-    Serial.print("quat\t");
-    Serial.print(q.w);
-    Serial.print("\t");
-    Serial.print(q.x);
-    Serial.print("\t");
-    Serial.print(q.y);
-    Serial.print("\t");
-    Serial.print(q.z);
-    Serial.print("\tstatus:");
-    Serial.println(status);
-	}
-#endif
 
 	//return( asin(-2*(q.x * q.z - q.w * q.y)) * 180/M_PI); //roll
 	return (atan2(2 * (q.y * q.z + q.w * q.x),
@@ -410,9 +396,8 @@ void readControlParameters() {
 	// Parameters Mode (page2 controls)
 	// User could adjust KP, KD and KP_THROTTLE (fadder1,2,3)
 	// Now we need to adjust all the parameters all the times because we don't know what parameter has been moved
-	if (OSC.page == 2)
-	//if ((OSC.page==2)&&(OSC.toggle1==1))
-			{
+	//if (OSC.page == 2) {
+	if ((OSC.page == 2) && (OSC.toggle1 == 1)) {
 		Serial.print("Par: ");
 		Kp_user = KP * 2 * OSC.fadder1;
 		Kd_user = KD * 2 * OSC.fadder2;
@@ -437,7 +422,7 @@ void readControlParameters() {
 
 		// Kill robot => Sleep
 		while (OSC.toggle2) {
-			//Reset external parameters
+			// Reset external parameters
 			mpu.resetFIFO();
 			PID_errorSum = 0;
 			timer_old = millis();
@@ -548,7 +533,17 @@ void setupWifi() {
 //	WITA.LedBlink(3, true);
 //	Serial.println("Wifi configuration...DONE");
 }
-
+//void testServo(const char* szMessage) {
+//	Serial.println(szMessage);
+//
+//	WITA.ServoWrite(3, 0);
+//	delay(3000);
+//	for(int i = 0; i < 180; i++){
+//		WITA.ServoWrite(3, i);  // Move arm forward
+//		delay(5);
+//	}
+//	delay(3000);
+//}
 void setup() {
 	// STEPPER PINS
 	pinMode(4, OUTPUT);  // ENABLE MOTORS
@@ -562,7 +557,6 @@ void setup() {
 
 	Serial.begin(115200);
 
-	//servoAux.attach();
 	setupWifi();
 
 	// Join I2C bus
@@ -709,6 +703,7 @@ void loop() {
 		}
 
 		if (mode == 0) {
+			// we are running in manual mode
 			if ((OSC.fadder1 > 0.45) && (OSC.fadder1 < 0.55)) // Small deadband on throttle
 				throttle = 0;
 			else
@@ -814,14 +809,14 @@ void loop() {
 
 		// Is robot ready (upright?)
 		if ((angle_adjusted < 74) && (angle_adjusted > -74)) {
+			// robot is ready, -74deg < angle < 74deg
 			if (OSC.push2) // pushUp mode?
 			{
 				pushUp_counter++;
-				WITA.Servo(3, 600);  // Move arm forward
+				WITA.Servo(3, SERVO_AUX_FORWARD/*600*/);  // Move arm forward
 				OSC.fadder1 = 0.5;
 				OSC.fadder2 = 0.5;
-				if (pushUp_counter > 60) // 0.3 seconds
-						{
+				if (pushUp_counter > 60) { // 0.3 seconds
 					// Set motors to 0 => disable steppers => robot
 					setMotorSpeed(0, 0);
 					setMotorSpeed(1, 0);
@@ -841,7 +836,7 @@ void loop() {
 				setMotorSpeed(1, motor2);
 				pushUp_counter = 0;
 				if (OSC.push1)  // Move arm
-					WITA.Servo(3, 750);
+					WITA.Servo(3, SERVO_AUX_FORWARD/*750*/);
 				else
 					WITA.Servo(3, SERVO_AUX_NEUTRO);
 			}
@@ -869,16 +864,16 @@ void loop() {
 			// Raise up the robot with the servo arm
 			if (OSC.push1) {
 				if (angle_adjusted > 0)
-					WITA.Servo(3, 600);
+					WITA.Servo(3, SERVO_AUX_FORWARD/*600*/);
 				else
-					WITA.Servo(3, 2400);
+					WITA.Servo(3, SERVO_AUX_BACKWARD/*2400*/);
 			} else
 				WITA.Servo(3, SERVO_AUX_NEUTRO);
 			// If we are in good position, we could raise up if we detect an user
 			if (angle_adjusted < 0) {
 				readDistanceSensor();
 				if (distance_sensor < OBSTACLE_DISTANCE_MIN)
-					WITA.Servo(3, 2400);
+					WITA.Servo(3, SERVO_AUX_BACKWARD/*2400*/);
 			}
 		}
 	} // New IMU data
@@ -902,6 +897,7 @@ void loop() {
 		slow_loop_counter = 0;
 		// Read battery status
 		readBattery();
+
 #if DEBUG==6
 		Serial.print("B");
 		Serial.println(battery);

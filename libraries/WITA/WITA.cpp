@@ -95,6 +95,7 @@ void WITA_Class::Servo(unsigned char ch, int pwm) {
 		OCR1C = pwm;
 		break;  //ch2
 	case 3:
+		//Serial.print("servo3=");Serial.println(pwm);
 		OCR3A = pwm;
 		break;  //ch3
 	}

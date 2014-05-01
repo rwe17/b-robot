@@ -30,29 +30,29 @@
 
 
 // Private Methods
-float OSCmini_Class::extractParamFloat1(){
-union{
-  unsigned char Buff[4];
-  float d;
-}u;
- 
-  u.Buff[0] = (unsigned char)UDPBuffer[0];
-  u.Buff[1] = (unsigned char)UDPBuffer[1];
-  u.Buff[2] = (unsigned char)UDPBuffer[2];
-  u.Buff[3] = (unsigned char)UDPBuffer[3];
-  return(u.d); 
+float OSCmini_Class::extractParamFloat1() {
+	union {
+		unsigned char Buff[4];
+		float d;
+	} u;
+
+	u.Buff[0] = (unsigned char) UDPBuffer[0];
+	u.Buff[1] = (unsigned char) UDPBuffer[1];
+	u.Buff[2] = (unsigned char) UDPBuffer[2];
+	u.Buff[3] = (unsigned char) UDPBuffer[3];
+	return (u.d);
 }
-float OSCmini_Class::extractParamFloat2(){
-union{
-  unsigned char Buff[4];
-  float d;
-}u;
- 
-  u.Buff[0] = (unsigned char)UDPBuffer[4];
-  u.Buff[1] = (unsigned char)UDPBuffer[5];
-  u.Buff[2] = (unsigned char)UDPBuffer[6];
-  u.Buff[3] = (unsigned char)UDPBuffer[7];
-  return(u.d); 
+float OSCmini_Class::extractParamFloat2() {
+	union {
+		unsigned char Buff[4];
+		float d;
+	} u;
+
+	u.Buff[0] = (unsigned char) UDPBuffer[4];
+	u.Buff[1] = (unsigned char) UDPBuffer[5];
+	u.Buff[2] = (unsigned char) UDPBuffer[6];
+	u.Buff[3] = (unsigned char) UDPBuffer[7];
+	return (u.d);
 }
 
 
@@ -316,9 +316,6 @@ void OSCmini_Class::MsgRead() {
 #endif
 					break;
 				case 22:
-					// rwe: Setting / Resetting pushup mode
-					Serial.print("pushup mode: ");
-					Serial.println(value);
 					if (value == 0)
 						push2 = 0;
 					else
