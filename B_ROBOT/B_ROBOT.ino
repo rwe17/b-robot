@@ -30,9 +30,10 @@
 // We control the robot from a WIFI module using OSC standard UDP messages (OSCmini library)
 //    fadder1: Throttle 
 //    fadder2: Steering 
-//    push1: Move arm (and robot raiseup)
-//    push2: push up
+//    push1: Move arm
+//    push2: push up (and robot raiseup)
 //    toggle1: autonomous mode
+//    toggle2 and page2: sleep
 //    PAGE2: PID adjustements
 
 // Robot autonomous mode
@@ -398,7 +399,7 @@ void readControlParameters() {
 	// Now we need to adjust all the parameters all the times because we don't know what parameter has been moved
 	//if (OSC.page == 2) {
 	if ((OSC.page == 2) && (OSC.toggle1 == 1)) {
-		Serial.print("Par: ");
+		//Serial.print("Par: ");
 		Kp_user = KP * 2 * OSC.fadder1;
 		Kd_user = KD * 2 * OSC.fadder2;
 		Kp_thr_user = KP_THROTTLE * 2 * OSC.fadder3;
