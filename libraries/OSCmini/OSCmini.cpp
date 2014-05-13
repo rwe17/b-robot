@@ -1,33 +1,32 @@
 /*
-	OSCmini.cpp -  Library for OSC control (designed originally for Arduino WITA board).
-	Code by Jose Julio and Jordi Muñoz. 3DRobotics.com
+ OSCmini.cpp -  Library for OSC control (designed originally for Arduino WITA board).
+ Code by Jose Julio and Jordi Muñoz. 3DRobotics.com
 
-	This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License, or (at your option) any later version.
 
-    OSC Messages read:
-             FADDER (1,2,3,4)
-             XY (1,2)
-             PUSH (1,2,3,4)
-             TOGLE (1,2,3,4)
-    OSC Message send:
-            
-    
-	Methods:
-            MsgSend()
-            MsgRead()
-		
-*/
+ OSC Messages read:
+ FADDER (1,2,3,4)
+ XY (1,2)
+ PUSH (1,2,3,4)
+ TOGLE (1,2,3,4)
+ OSC Message send:
+
+
+ Methods:
+ MsgSend()
+ MsgRead()
+
+ */
 #include "Arduino.h"
 #include "OSCmini.h"
 
 #include <avr/interrupt.h>
 //#include "WProgram.h"
 
-//#define DEBUG 0
-
+#define DEBUG 1
 
 // Private Methods
 float OSCmini_Class::extractParamFloat1() {
@@ -55,48 +54,49 @@ float OSCmini_Class::extractParamFloat2() {
 	return (u.d);
 }
 
-
 // Constructors ////////////////////////////////////////////////////////////////
 
-OSCmini_Class::OSCmini_Class()
-{
-  readStatus=0;
-  readCounter=0;
-  readNumParams=0;
-  commandType=0;
-  fadder1 = 0.5;
-  fadder2 = 0.5;
-  fadder3 = 0.5;
-  fadder4 = 0.5;
+OSCmini_Class::OSCmini_Class() {
+	readStatus = 0;
+	readCounter = 0;
+	readNumParams = 0;
+	commandType = 0;
+	fadder1 = 0.5;
+	fadder2 = 0.5;
+	fadder3 = 0.5;
+	fadder4 = 0.5;
 }
 
 // Private function
 // This function lets us send simple one param messages (float param)
-void OSCmini_Class::MsgSend(char *c,unsigned char msgSize, float p)
-{
+void OSCmini_Class::MsgSend(char *c, unsigned char msgSize, float p) {
 
-union{
-  unsigned char Buff[4];
-  float d;
-}u;
+	union {
+		unsigned char Buff[4];
+		float d;
+	} u;
 
-  // We copy the param in the last 4 bytes
-  u.d = p;
-  c[msgSize-4] = u.Buff[0];
-  c[msgSize-3] = u.Buff[1];
-  c[msgSize-2] = u.Buff[2];
-  c[msgSize-1] = u.Buff[3];
-  // We send the message
-  //for (i=0;i< msgSize;i++)
-  Serial1.write((const uint8_t *)c,msgSize);
+	// We copy the param in the last 4 bytes
+	u.d = p;
+	c[msgSize - 4] = u.Buff[0];
+	c[msgSize - 3] = u.Buff[1];
+	c[msgSize - 2] = u.Buff[2];
+	c[msgSize - 1] = u.Buff[3];
+	// We send the message
+	//for (i=0;i< msgSize;i++)
+	Serial1.write((const uint8_t *) c, msgSize);
 }
-
 
 void OSCmini_Class::MsgRead() {
 	unsigned char i;
 	float value;
 	float value2;
-	if (Serial1.available() > 0) {
+	int bytesInBuffer = Serial1.available();
+	if (bytesInBuffer > 0) {
+		if (bytesInBuffer > 60) {
+			Serial.print("!ERR:UDPBuffer near overflow! ");
+			Serial.println(Serial1.available());
+		}
 		// We rotate the Buffer (we could implement a ring buffer in future)
 		for (i = 7; i > 0; i--) {
 			UDPBuffer[i] = UDPBuffer[i - 1];
@@ -118,8 +118,7 @@ void OSCmini_Class::MsgRead() {
 			return;
 		} else if (readStatus == 1) {   // looking for the message type
 			// Fadder    /1/fadder1 ,f  xxxx
-			if ((UDPBuffer[3] == 'd') && (UDPBuffer[2] == 'e')
-					&& (UDPBuffer[1] == 'r')) {
+			if ((UDPBuffer[3] == 'd') && (UDPBuffer[2] == 'e') && (UDPBuffer[1] == 'r')) {
 				readStatus = 2;    // Message type detected
 				readCounter = 11;  // Bytes to read the parameter
 				readNumParams = 1; // 1 parameters
@@ -179,8 +178,8 @@ void OSCmini_Class::MsgRead() {
 				return;
 			}  // End XY message
 			   // Push message
-			if ((UDPBuffer[4] == 'p') && (UDPBuffer[3] == 'u')
-					&& (UDPBuffer[2] == 's') && (UDPBuffer[1] == 'h')) {
+			if ((UDPBuffer[4] == 'p') && (UDPBuffer[3] == 'u') && (UDPBuffer[2] == 's')
+					&& (UDPBuffer[1] == 'h')) {
 				readStatus = 2;    // Message type detected
 				readCounter = 10;  // Bytes to read the parameter
 				readNumParams = 1; // 1 parameters
@@ -213,8 +212,7 @@ void OSCmini_Class::MsgRead() {
 				return;
 			} // end push
 			  // Toggle message
-			if ((UDPBuffer[3] == 'g') && (UDPBuffer[2] == 'l')
-					&& (UDPBuffer[1] == 'e')) {
+			if ((UDPBuffer[3] == 'g') && (UDPBuffer[2] == 'l') && (UDPBuffer[1] == 'e')) {
 				readStatus = 2;    // Message type detected
 				readCounter = 10;  // Bytes to read the parameter
 				readNumParams = 1; // 1 parameters
@@ -312,7 +310,7 @@ void OSCmini_Class::MsgRead() {
 					else
 						push1 = 1;
 #ifdef DEBUG
-					Serial.println((int)push1);
+					Serial.println((int) push1);
 #endif
 					break;
 				case 22:
@@ -321,7 +319,7 @@ void OSCmini_Class::MsgRead() {
 					else
 						push2 = 1;
 #ifdef DEBUG
-					Serial.println((int)push2);
+					Serial.println((int) push2);
 #endif
 					break;
 				case 23:
@@ -330,7 +328,7 @@ void OSCmini_Class::MsgRead() {
 					else
 						push3 = 1;
 #ifdef DEBUG
-					Serial.println((int)push3);
+					Serial.println((int) push3);
 #endif
 					break;
 				case 24:
@@ -339,7 +337,7 @@ void OSCmini_Class::MsgRead() {
 					else
 						push4 = 1;
 #ifdef DEBUG
-					Serial.println((int)push4);
+					Serial.println((int) push4);
 #endif
 					break;
 				case 31:
@@ -348,7 +346,7 @@ void OSCmini_Class::MsgRead() {
 					else
 						toggle1 = 1;
 #ifdef DEBUG
-					Serial.println((int)toggle1);
+					Serial.println((int) toggle1);
 #endif
 					break;
 				case 32:
@@ -357,7 +355,7 @@ void OSCmini_Class::MsgRead() {
 					else
 						toggle2 = 1;
 #ifdef DEBUG
-					Serial.println((int)toggle2);
+					Serial.println((int) toggle2);
 #endif
 					break;
 				case 33:
@@ -366,7 +364,7 @@ void OSCmini_Class::MsgRead() {
 					else
 						toggle3 = 1;
 #ifdef DEBUG
-					Serial.println((int)toggle3);
+					Serial.println((int) toggle3);
 #endif
 					break;
 				case 34:
@@ -375,7 +373,7 @@ void OSCmini_Class::MsgRead() {
 					else
 						toggle4 = 1;
 #ifdef DEBUG
-					Serial.println((int)toggle4);
+					Serial.println((int) toggle4);
 #endif
 					break;
 				}
@@ -383,7 +381,6 @@ void OSCmini_Class::MsgRead() {
 		}
 	}  // end Serial.available()
 }
-
 
 // Public Methods //////////////////////////////////////////////////////////////
 
