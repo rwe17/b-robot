@@ -58,7 +58,7 @@
 #define DEBUG 6
 // some settings only necessary for my robot ;)
 // rwe: #define SHUTDOWN_WHEN_BATTERY_OFF 1
-#define MAX_MOTOR_SPEED 250 // rwe: 500 if you have optimal stepper and high voltage
+#define MAX_MOTOR_SPEED 400 // rwe: 500 if you have optimal stepper and high voltage
 //#define MPU_ANGLE_CORRECTION (-3.0) // rwe: due to unprecise fitting of MPU
 
 #define CLR(x,y) (x&=(~(1<<y)))
@@ -139,7 +139,7 @@ uint8_t loop_counter;       // To generate a medium loop 40Hz
 uint8_t slow_loop_counter;  // slow loop 2Hz
 long timer_old;
 long timer_value;
-int debug_counter;
+//int debug_counter;
 float dt;
 
 // class default I2C address is 0x68
@@ -252,8 +252,7 @@ float speedPControl(float input, float setPoint, float Kp) {
 }
 
 // PI implementation. DT is in miliseconds
-float speedPIControl(float DT, float input, float setPoint, float Kp,
-		float Ki) {
+float speedPIControl(float DT, float input, float setPoint, float Kp, float Ki) {
 	float error;
 	float output;
 
@@ -399,7 +398,7 @@ void readControlParameters() {
 	// Now we need to adjust all the parameters all the times because we don't know what parameter has been moved
 	//if (OSC.page == 2) {
 	if ((OSC.page == 2) && (OSC.toggle1 == 1)) {
-		//Serial.print("Par: ");
+		Serial.print("Par: ");
 		Kp_user = KP * 2 * OSC.fadder1;
 		Kd_user = KD * 2 * OSC.fadder2;
 		Kp_thr_user = KP_THROTTLE * 2 * OSC.fadder3;
@@ -611,9 +610,7 @@ void setup() {
 	// verify connection
 	Serial.println("Testing device connections...");
 	Serial.println(
-			mpu.testConnection() ?
-					"MPU6050 connection successful" :
-					"MPU6050 connection failed");
+			mpu.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
 	timer_old = millis();
 
 	// Init servos
@@ -672,7 +669,7 @@ void setup() {
 	OSC.fadder1 = 0.5;
 	OSC.fadder2 = 0.5;
 
-	mpu.resetFIFO();
+//	mpu.resetFIFO();
 	timer_old = millis();
 	Robot_shutdown = false;
 }
@@ -685,7 +682,7 @@ void loop() {
 		return;
 	}
 #endif
-	debug_counter++;
+//	debug_counter++;
 	OSC.MsgRead();  // Read UDP OSC messages
 	if (OSC.page == 1) // Get commands from user (PAGE1 are user commands: throttle, steering...)
 			{
@@ -711,12 +708,11 @@ void loop() {
 				throttle = (OSC.fadder1 - 0.5) * max_throttle;
 			// We add some exponential on steering to smooth the center band
 			steering = OSC.fadder2 - 0.5;
-			if (steering > 0)
-				steering = (steering * steering + 0.5 * steering)
-						* max_steering;
-			else
-				steering = (-steering * steering + 0.5 * steering)
-						* max_steering;
+			if (steering > 0) {
+				steering = (steering * steering + 0.5 * steering) * max_steering;
+			} else {
+				steering = (-steering * steering + 0.5 * steering) * max_steering;
+			}
 		}
 		modifing_control_parameters = false;
 	}
@@ -725,8 +721,8 @@ void loop() {
 	// New DMP Orientation solution?
 	fifoCount = mpu.getFIFOCount();
 	if (fifoCount >= 18) {
-		if (fifoCount > 18) // If we have more than one packet we take the easy path: discard the buffer
-				{
+		if (fifoCount > 18) {
+			// If we have more than one packet we take the easy path: discard the buffer
 			Serial.println("FIFO RESET!!");
 			mpu.resetFIFO();
 			return;
@@ -752,7 +748,8 @@ void loop() {
 		Serial.println(angle_adjusted);
 #endif
 		//Serial.print("\t");
-		mpu.resetFIFO();  // We always reset FIFO
+		// TODO rwe: it seems to me better to reset the FIFO not so often
+		//mpu.resetFIFO();  // We always reset FIFO
 
 		if (mode == 1) {
 			autonomousMode();
@@ -774,10 +771,8 @@ void loop() {
 
 		//target_angle = (target_angle + speedPControl(estimated_speed_filtered,throttle,Kp_thr))/2.0;   // Some filtering : Average with previous output
 		//target_angle = target_angle*0.3 + speedPIControl(dt,estimated_speed_filtered,throttle,Kp_thr,Ki_thr)*0.7;   // Some filtering
-		target_angle = speedPIControl(dt, estimated_speed_filtered, throttle,
-				Kp_thr, Ki_thr);
-		target_angle = constrain(target_angle, -max_target_angle,
-				max_target_angle);   // limited output
+		target_angle = speedPIControl(dt, estimated_speed_filtered, throttle, Kp_thr, Ki_thr);
+		target_angle = constrain(target_angle, -max_target_angle, max_target_angle); // limited output
 
 #if DEBUG==3
 		Serial.print(" ");Serial.println(estimated_speed_filtered);
@@ -792,13 +787,11 @@ void loop() {
 		}
 
 		// We integrate the output (acceleration)
-		control_output += stabilityPDControl(dt, angle_adjusted, target_angle,
-				Kp, Kd);
+		control_output += stabilityPDControl(dt, angle_adjusted, target_angle, Kp, Kd);
 #if DEBUG==10
 		Serial.print(" ");Serial.println(control_output);
 #endif
-		control_output = constrain(control_output, -MAX_MOTOR_SPEED,
-				MAX_MOTOR_SPEED); // Limit max output from control
+		control_output = constrain(control_output, -MAX_MOTOR_SPEED, MAX_MOTOR_SPEED); // Limit max output from control
 
 		// The steering part of the control is injected directly on the output
 		motor1 = control_output + steering;

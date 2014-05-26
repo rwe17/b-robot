@@ -9,7 +9,13 @@ class OSCmini_Class
   private:
     // UPD input buffer
     char UDPBuffer[8];
-    // OSC message read variables
+	/*
+	 * OSC message read variables,
+	 * 0 (and x): always try to find a message start
+	 * 1: message start is detected and read bytes until a message type is detected. When message type is received set readCounter and change to 2
+	 * 2: read readCounter bytes to get all message parameter. Whan message parameters are available switch directly to 3
+	 * 3: readCounter bytes are completely received and parameter will be parsed
+	 */
     unsigned char readStatus;
     unsigned char readCounter;
     unsigned char readNumParams;

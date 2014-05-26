@@ -86,17 +86,20 @@ void OSCmini_Class::MsgSend(char *c, unsigned char msgSize, float p) {
 	//for (i=0;i< msgSize;i++)
 	Serial1.write((const uint8_t *) c, msgSize);
 }
-
 void OSCmini_Class::MsgRead() {
 	unsigned char i;
-	float value;
-	float value2;
 	int bytesInBuffer = Serial1.available();
-	if (bytesInBuffer > 0) {
-		if (bytesInBuffer > 60) {
-			Serial.print("!ERR:UDPBuffer near overflow! ");
-			Serial.println(Serial1.available());
-		}
+	if (bytesInBuffer <= 0) {
+		return;
+	}
+
+	if (bytesInBuffer > 60) {
+		Serial.print("!ERR:UDPBuffer near overflow! ");
+		Serial.println(Serial1.available());
+	}
+
+	int bytesToParse = min(4, bytesInBuffer);
+	for (int n = 0; n < bytesToParse; n++) {
 		// We rotate the Buffer (we could implement a ring buffer in future)
 		for (i = 7; i > 0; i--) {
 			UDPBuffer[i] = UDPBuffer[i - 1];
@@ -248,12 +251,15 @@ void OSCmini_Class::MsgRead() {
 			readCounter--; // Reading counter until we reach the Parameter position
 			if (readCounter <= 0) {
 				readStatus = 3;
+				float value;
 				//Serial.print("$LEERNUM$");
 				value = extractParamFloat1();
 				//Serial.print("F:");
 				//Serial.println(value);
-				if ((value < 0) || (value > 1))
+				if ((value < 0) || (value > 1)) {
 					Serial.println("!ERR:float1!");
+				}
+				float value2;
 				if (readNumParams == 2) {
 					value2 = extractParamFloat2();
 					if ((value2 < 0) || (value2 > 1))
