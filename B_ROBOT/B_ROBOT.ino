@@ -103,9 +103,9 @@
 #define KP_THROTTLE_RAISEUP 0  // No speed control on raiseup
 #define KI_THROTTLE_RAISEUP 0.0
 
-#define SERVO_AUX_FORWARD (1000 + (180*100)/18)
+#define SERVO_AUX_FORWARD (1000 + (0/*180*/*100)/18)
 #define SERVO_AUX_NEUTRO (1000 + (90*100)/18)
-#define SERVO_AUX_BACKWARD (1000 + (0*100)/18)
+#define SERVO_AUX_BACKWARD (1000 + (180/*0*/*100)/18)
 
 #define ITERM_MAX_ERROR 40   // Iterm windup constants
 #define ITERM_MAX 5000

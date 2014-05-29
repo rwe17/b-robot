@@ -6,7 +6,7 @@ Video: http://youtu.be/V-_uxpX9aFQ
 
 Blog: http://cienciaycacharreo.blogspot.com.es/2013/10/b-robot-un-robot-equilibrista-impreso_28.html
 
-Board: custom board (WITA): It´s an Arduino Leonardo + Wifi module (RN131)
+Board: custom board (WITA): It´s an Arduino Leonardo + Wifi module (RN131/RN171)
 
 Motors: NEMA17 Stepper Motors 
 
