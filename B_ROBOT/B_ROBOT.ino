@@ -37,7 +37,8 @@
 //    PAGE2: PID adjustements
 
 // Robot autonomous mode
-//   the robot start walking until reach an obstacle. When find an obstacle, start steering until it find a free way and continue walking
+//   The robot start walking until reach an obstacle. When find an obstacle, start steering until it find a free way
+//   and continue walking.
 //
 // ------------------------------------------------
 // rwe:
